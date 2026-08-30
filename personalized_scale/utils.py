@@ -1,7 +1,6 @@
 import torch.nn as nn
 
 def _is_bn_param(n: str) -> bool:
-    """Helper to identify Batch Normalization parameters."""
     return (n.startswith('bn1.') or
             '.bn1.' in n or
             '.bn2.' in n or
@@ -9,9 +8,8 @@ def _is_bn_param(n: str) -> bool:
 
 def mark_only_scale_as_trainable(model: nn.Module) -> None:
     """
-    Stage II (Feature Recalibration):
-    Trains personalized parameters (phi) and BN.
-    Freezes the shared backbone.
+    Stage 2: Train personalized feature recalibration parameters (phi) and BN.
+    Freeze: Backbone (excluding BN).
     """
     for n, p in model.named_parameters():
         if 'phi' in n or _is_bn_param(n):
@@ -21,9 +19,8 @@ def mark_only_scale_as_trainable(model: nn.Module) -> None:
 
 def mark_only_backbone_as_trainable(model: nn.Module) -> None:
     """
-    Stage I (Structural Distillation):
-    Trains the backbone (theta) and BN.
-    Freezes personalized parameters (phi).
+    Stage 1: Train backbone and BN.
+    Freeze: Personalized feature recalibration parameters (phi).
     """
     for n, p in model.named_parameters():
         if 'phi' in n:
