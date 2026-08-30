@@ -7,14 +7,9 @@ class PersonalizedScaleLayer:
         pass
 
 class ChannelScale(nn.Module, PersonalizedScaleLayer):
-    """
-    Channel-wise scaling layer for personalized feature recalibration
-    and logit boundary adjustment (phi parameters in HDFL).
-    """
     def __init__(self, num_channels: int):
         super(ChannelScale, self).__init__()
         PersonalizedScaleLayer.__init__(self)
-        # phi: The learnable personalized scaling vector
         self.phi = nn.Parameter(torch.ones(num_channels))
 
     def reset_parameters(self):
@@ -22,7 +17,6 @@ class ChannelScale(nn.Module, PersonalizedScaleLayer):
             nn.init.ones_(self.phi)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Applies channel-wise scaling based on input dimensionality."""
         if x.dim() == 2:
             return x * self.phi
         elif x.dim() == 4:
