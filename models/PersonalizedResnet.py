@@ -4,16 +4,20 @@ import torch.nn as nn
 from typing import Type, Any, Callable, Union, List, Optional
 import torch.nn.functional as F
 
-from personalized_scale.layers import ChannelScale
+
+from personalized_scale.layers import ChannelScale, AffineScale
+
 
 def conv3x3(in_planes: int, out_planes: int, stride: int = 1, groups: int = 1, dilation: int = 1) -> nn.Conv2d:
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
                      padding=dilation, groups=groups, bias=False, dilation=dilation)
 
+
 def conv1x1(in_planes: int, out_planes: int, stride: int = 1) -> nn.Conv2d:
     """1x1 convolution"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=False)
+
 
 class BasicBlock(nn.Module):
     expansion: int = 1
@@ -68,6 +72,7 @@ class BasicBlock(nn.Module):
 
         return out
 
+
 class ResNet(nn.Module):
     def __init__(
             self,
@@ -112,8 +117,9 @@ class ResNet(nn.Module):
         self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
 
         self.fc = nn.Linear(features[len(layers) - 1] * block.expansion, num_labels)
-        
-        self.phi_logit = ChannelScale(num_labels)
+
+
+        self.phi_logit = AffineScale(num_labels)
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -121,7 +127,8 @@ class ResNet(nn.Module):
             elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
                 nn.init.constant_(m.weight, 1)
                 nn.init.constant_(m.bias, 0)
-            elif isinstance(m, ChannelScale):
+
+            elif isinstance(m, (ChannelScale, AffineScale)):
                 m.reset_parameters()
 
         if zero_init_residual:
@@ -169,6 +176,7 @@ class ResNet(nn.Module):
         features = x
 
         x = self.fc(x)
+        
         x = self.phi_logit(x)
 
         if return_features:
@@ -178,19 +186,24 @@ class ResNet(nn.Module):
     def forward(self, x: Tensor, return_features=False):
         return self._forward_impl(x, return_features)
 
+
 def resnet18(**kwargs: Any) -> ResNet:
     return ResNet(BasicBlock, [2, 2, 2, 2], **kwargs)
 
+
 def resnet10(**kwargs: Any) -> ResNet:
     return ResNet(BasicBlock, [1, 1, 1, 1], **kwargs)
+
 
 def resnet8(**kwargs: Any) -> ResNet:
     kwargs['features'] = [64, 128, 256]
     return ResNet(BasicBlock, [1, 1, 1], **kwargs)
 
+
 def resnet6(**kwargs: Any) -> ResNet:
     kwargs['features'] = [64, 128]
     return ResNet(BasicBlock, [1, 1], **kwargs)
+
 
 def resnet4(**kwargs: Any) -> ResNet:
     kwargs['features'] = [64]
